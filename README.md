@@ -72,6 +72,75 @@ python main.py
 
 3. 分析报告将自动生成并保存在`public/index.html`路径下
 
+## 服务模式（持续自动更新，推荐）
+
+一次部署，长期运行，自动定时更新报告并对外提供访问页面。还支持从 Git 自动拉取仓库更新并自我重启应用，真正做到“部署一次，长期免维护”。
+
+- 启动命令：python server.py
+- 默认端口：8000（可通过环境变量 PORT 修改）
+- 默认更新频率：每 60 分钟（可通过 UPDATE_INTERVAL_MINUTES 修改）
+- 默认输出目录：public/index.html（可通过 PUBLIC_DIR 修改）
+
+1) 快速开始
+
+- 安装依赖（推荐使用 requirement.txt）
+  pip install -r requirement.txt
+
+- 指定要分析的股票（两种方式任选其一）
+  方式一：在仓库根目录创建 stocks.json
+  {
+    "上证指数": "sh000001",
+    "平安银行": "sz000001"
+  }
+  方式二：使用环境变量传入 JSON
+  export STOCKS_JSON='{"上证指数":"sh000001","平安银行":"sz000001"}'
+
+- 启动服务
+  python server.py
+  浏览器访问 http://<服务器IP>:8000
+
+2) 常用环境变量（可选）
+
+- PORT：HTTP 服务端口，默认 8000
+- PUBLIC_DIR：静态文件输出目录，默认 ./public
+- UPDATE_INTERVAL_MINUTES：自动更新间隔（分钟），默认 60
+- HISTORY_COUNT：历史数据条数，默认 120
+- LLM_API_KEY / LLM_BASE_URL / LLM_MODEL：启用 AI 分析所需配置
+- STOCKS_FILE：自定义股票配置文件路径（默认 ./stocks.json）
+- STOCKS_JSON：直接传入 JSON 字符串（高优先级）
+- AUTO_GIT_UPDATE：是否开启 Git 自动拉取更新，默认 1（开启）
+- GIT_REMOTE / GIT_BRANCH：Git 远端与分支，默认 origin/main
+- AUTO_UPDATE_PIP：拉取代码后是否自动 pip install -r requirement.txt，默认 0（关闭）
+
+3) 内置 HTTP 接口
+
+- GET /          当前生成的报告页面（public 目录）
+- GET /status    查看最近一次更新状态、更新时间、当前 Commit 等
+- GET /update    立刻触发一次后台更新（异步）
+- GET /healthz   健康检查
+
+4) 开机自启（systemd 示例）
+
+- /etc/systemd/system/ashare-llm.service（示例）：
+  [Unit]
+  Description=Ashare LLM Analyst (auto update server)
+  After=network.target
+
+  [Service]
+  WorkingDirectory=/opt/ashare-llm-analyst
+  ExecStart=/usr/bin/python3 server.py
+  Environment=PORT=8000
+  Environment=UPDATE_INTERVAL_MINUTES=60
+  Environment=AUTO_GIT_UPDATE=1
+  Restart=always
+
+  [Install]
+  WantedBy=multi-user.target
+
+- 启动与开机自启
+  sudo systemctl daemon-reload
+  sudo systemctl enable --now ashare-llm.service
+
 ## 技术架构
 
 - 数据获取：使用Ashare模块获取A股历史数据

@@ -1,5 +1,6 @@
 import base64
 import os
+import json
 from datetime import datetime
 from io import BytesIO
 from string import Template
@@ -1122,10 +1123,30 @@ class StockAnalyzer:
 
 
 if __name__ == "__main__":
-    # 正确的股票代码示例
-    stock_info = {
-        '上证指数': 'sh000001'
-    }
+    # 支持通过环境变量或配置文件指定股票
+    env_json = os.environ.get("STOCKS_JSON")
+    stock_info = None
+    if env_json:
+        try:
+            parsed = json.loads(env_json)
+            if isinstance(parsed, dict) and parsed:
+                stock_info = parsed
+        except Exception as e:
+            print(f"STOCKS_JSON 解析失败: {e}")
+    if stock_info is None and os.path.exists("stocks.json"):
+        try:
+            with open("stocks.json", "r", encoding="utf-8") as f:
+                parsed = json.load(f)
+                if isinstance(parsed, dict) and parsed:
+                    stock_info = parsed
+        except Exception as e:
+            print(f"加载 stocks.json 失败: {e}")
+
+    if stock_info is None:
+        # 默认示例
+        stock_info = {
+            '上证指数': 'sh000001'
+        }
 
     print("开始股票技术分析...")
     print(f"分析股票: {list(stock_info.keys())}")
